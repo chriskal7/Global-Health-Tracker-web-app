@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 import pandas as pd
+import plotly.express as px
+import statsmodels
 
 st.set_page_config(page_title="Global Health Tracker", layout="wide")
 st.title("🌍 Global Health Tracker")
@@ -39,5 +41,19 @@ with col1:
 
 with col2:
     filtered = df[df['Country'] == selected_country]
-    st.line_chart(filtered.set_index('Year')['Life_Expectancy'])
-    st.write(f"Peak life expectancy for {selected_country}: {int(filtered['Life_Expectancy'].max())}")
+
+    fig = px.scatter(filtered, x='Year', y='Life_Expectancy',
+                  title=f"Life Expectancy Trend in {selected_country}",
+                  template="plotly_white",
+                  trendline="ols",
+                  trendline_color_override="red")
+
+    st.plotly_chart(fig, width="stretch")
+
+    # Analytical Insight
+    max_val = filtered['Life_Expectancy'].max()
+    peak_year = filtered[filtered['Life_Expectancy'] == max_val]['Year'].values[0]
+
+    st.success(
+        f"📈 **Analytical Insight:** {selected_country} reached its peak life expectancy of **{max_val:.1f} "
+        f"years** in **{peak_year}**.")
