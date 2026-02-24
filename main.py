@@ -10,12 +10,23 @@ st.title("🌍 Global Health Tracker")
 @st.cache_data
 def load_data():
     url = "https://api.worldbank.org/v2/country/all/indicator/SP.DYN.LE00.IN?format=json&per_page=20000"
-    data = requests.get(url).json()[1] # jsonify
-    df = pd.json_normalize(data)[['country.value', 'date', 'value']] # Normalize
+
+    try:
+        data = requests.get(url, timeout=5)
+        data.raise_for_status()
+
+        data = data.json()[1] # jsonify
+        df = pd.json_normalize(data)[['country.value', 'date', 'value']] # Normalize
+
+        df.to_csv("health_data_backup.csv", index=False) # Write to backup csv
+    except:
+        st.warning("⚠️ API is offline. Loading cached local data...")
+        df = pd.read_csv("health_data_backup.csv")
+
     df.columns = ['Country', 'Year', 'Life_Expectancy'] # Rename columns
     df = df.dropna().sort_values('Year') # Remove missing values
-    df['Year'] = df['Year'].astype(int)
-    return df
+    df['Year'] = df['Year'].astype(int) # Convert Year values to int
+    return df.sort_values("Year")
 
 def get_country_info(name):
     # Fetch flag and population
@@ -47,6 +58,8 @@ with col2:
                   template="plotly_white",
                   trendline="ols",
                   trendline_color_override="red")
+
+    fig.update_traces(mode='lines+markers') # Connect scatterplot points into px.line
 
     st.plotly_chart(fig, width="stretch")
 
