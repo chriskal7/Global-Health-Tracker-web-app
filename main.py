@@ -13,9 +13,14 @@ st.title("🌍 Global Health Tracker")
 def load_data():
     url = "https://api.worldbank.org/v2/country/all/indicator/SP.DYN.LE00.IN?format=json&per_page=20000"
 
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+    }
+
     try:
         # Fetch data from World Bank API
-        res = requests.get(url, timeout=10)
+        res = requests.get(url, timeout=10, headers=headers)
         res.raise_for_status()
         data = res.json()[1]  # jsonify
         df = pd.json_normalize(data)[['country.value', 'date', 'value']]  # Normalize
@@ -23,7 +28,6 @@ def load_data():
         # Self-healing: Update local backup with fresh data
         df.to_csv("health_data_backup.csv", index=False)  # Write to backup csv
         st.sidebar.success("✅ Data synced from Live API")
-
     except:
         # Fallback mechanism: check if backup exists
         if os.path.exists("health_data_backup.csv"):
@@ -42,11 +46,21 @@ def load_data():
 
 def get_country_info(name):
     # Fetch flag and population
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+    }
+
     try:
-        res = requests.get(f"https://restcountries.com/v3.1/name/{name}?fullText=true", timeout=5)
+        res = requests.get(f"https://restcountries.com/v3.1/name/{name}?fullText=true", timeout=5, headers=headers)
         if res.status_code == 200:
             return res.json()[0]
-    except:
+    except requests.exceptions.HTTPError as err:
+        print(f"HTTP Error occurred: {err}")
+        return None
+    except Exception as e:
+        print(f"Error occurred: {e}")
         return None
 
 
@@ -65,7 +79,7 @@ if not df.empty:
             st.metric("Population", f"{info['population']:,}")
             st.write(f"**Region:** {info['region']}")
         else:
-            st.write(f"Region not found")
+            st.write(f"Region not found or couldn't fetch data.")
 
     with col2:
         filtered = df[df['Country'] == selected_country]
